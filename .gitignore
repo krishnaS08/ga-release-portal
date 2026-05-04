@@ -1,0 +1,10 @@
+# GA Release Portal — .gitignore
+local.settings.json
+.env
+GA_Automation_tool*
+node_modules/
+.vscode/
+*.log
+bin/
+obj/
+.azurite/

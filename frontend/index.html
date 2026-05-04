@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GA Release Portal — Aptean</title>
+    <link rel="icon" type="image/png" href="Aptean.png">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <img src="Aptean.png" alt="Aptean" width="32" height="32" style="object-fit:contain;">
+                    <span class="logo-text">GA Release Portal</span>
+                </div>
+            </div>
+            <nav class="header-nav">
+                <button class="nav-btn active" data-view="submit" onclick="showView('submit')">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M14 1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM8.5 11.5h-1v-4h1v4zm0-5h-1v-1h1v1z"/></svg>
+                    New Request
+                </button>
+                <button class="nav-btn" data-view="dashboard" onclick="showView('dashboard')">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1h6v6H1V1zm8 0h6v6H9V1zM1 9h6v6H1V9zm8 0h6v6H9V9z"/></svg>
+                    Dashboard
+                </button>
+                <button class="nav-btn" data-view="ga-initial" onclick="showView('ga-initial')">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a.5.5 0 0 1 .5.5V5h3a.5.5 0 0 1 .354.854l-4 4a.5.5 0 0 1-.708 0l-4-4A.5.5 0 0 1 3.5 5h3V1.5A.5.5 0 0 1 8 1zM1 12.5A1.5 1.5 0 0 1 2.5 11h11a1.5 1.5 0 0 1 1.5 1.5v1A1.5 1.5 0 0 1 13.5 15h-11A1.5 1.5 0 0 1 1 13.5v-1z"/></svg>
+                    GA-Initial
+                </button>
+            </nav>
+            <div class="header-right">
+                <div class="user-info" id="userInfo">
+                    <span class="user-avatar" id="userAvatar">?</span>
+                    <span class="user-name" id="userName">Sign In</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Submit Request View -->
+        <main class="content" id="view-submit">
+            <div class="page-header">
+                <h1>Submit GA Release Request</h1>
+                <p class="subtitle">Replace the manual email handover — submit your release details here and GA team will initiate the process.</p>
+            </div>
+
+            <form id="gaRequestForm" class="form-container" onsubmit="return handleSubmit(event)">
+                <!-- Section: Team, Release & Epics (merged) -->
+                <div class="form-section">
+                    <h2 class="section-title">
+                        <span class="section-icon">1</span>
+                        Team, Release & Epics
+                    </h2>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="teamName">Team Name <span class="required">*</span></label>
+                            <input type="text" id="teamName" name="teamName" placeholder="Enter your team name"
+                                required oninput="onTeamNameChange()" onblur="onTeamNameChange()">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="releaseType">Release Type <span class="required">*</span></label>
+                            <select id="releaseType" name="releaseType" required>
+                                <option value="">Select release type...</option>
+                                <option value="feature">Feature / Major</option>
+                                <option value="stability">Stability / Minor</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="submitterEmail">Your Email <span class="required">*</span></label>
+                            <input type="email" id="submitterEmail" name="submitterEmail" placeholder="yourname@aptean.com" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="targetMonth">Target Release Month <span class="required">*</span></label>
+                            <input type="month" id="targetMonth" name="targetMonth" required>
+                        </div>
+                    </div>
+
+                    <!-- Epic selection area — revealed after team name is entered -->
+                    <div id="epicSection" style="display:none;">
+                        <div class="epics-area-header">
+                            <h3 class="epics-area-title">Epics for GA Validation</h3>
+                            <button type="button" class="btn btn-add-epic" onclick="addEpicBlock()" title="Add another Epic">
+                                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a1 1 0 0 1 1 1v5h5a1 1 0 1 1 0 2H9v5a1 1 0 1 1-2 0V9H2a1 1 0 0 1 0-2h5V2a1 1 0 0 1 1-1z"/></svg>
+                                Add Epic
+                            </button>
+                        </div>
+                        <p class="section-hint">Showing epics with Factory Status = "70 GA Validation". Each epic can contain multiple apps.</p>
+                        <div id="epicBlocksContainer">
+                            <!-- Epic blocks rendered by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Additional Info (Optional) -->
+                <div class="form-section">
+                    <h2 class="section-title">
+                        <span class="section-icon">2</span>
+                        Additional Information <span class="optional-label">(Optional)</span>
+                    </h2>
+                    <div class="form-group full-width">
+                        <label for="notes">Notes / Special Instructions</label>
+                        <textarea id="notes" name="notes" rows="3" placeholder="Any special instructions, dependencies, or things GA team should know..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="resetForm()">Reset Form</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M14.5 1.5l-13 5.5 5 2 2.5 5.5z"/></svg>
+                        Submit GA Request
+                    </button>
+                </div>
+            </form>
+        </main>
+
+        <!-- Dashboard View -->
+        <main class="content" id="view-dashboard" style="display:none;">
+            <div class="page-header">
+                <h1>GA Release Dashboard</h1>
+                <p class="subtitle">Track all submitted GA release requests and their current status.</p>
+                <div class="dashboard-filters">
+                    <div class="filter-group">
+                        <label>Status:</label>
+                        <select id="filterStatus" onchange="loadRequests()">
+                            <option value="">All</option>
+                            <option value="pending">Pending Review</option>
+                            <option value="approved">Approved</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Team:</label>
+                        <select id="filterTeam" onchange="loadRequests()">
+                            <option value="">All Teams</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="loadRequests()">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13.65 2.35A8 8 0 1 0 16 8h-2a6 6 0 1 1-1.76-4.24L10 6h6V0l-2.35 2.35z"/></svg>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div class="dashboard-stats" id="dashboardStats">
+                <div class="stat-card">
+                    <div class="stat-value" id="statPending">0</div>
+                    <div class="stat-label">Pending</div>
+                </div>
+                <div class="stat-card stat-approved">
+                    <div class="stat-value" id="statApproved">0</div>
+                    <div class="stat-label">Approved</div>
+                </div>
+                <div class="stat-card stat-progress">
+                    <div class="stat-value" id="statInProgress">0</div>
+                    <div class="stat-label">In Progress</div>
+                </div>
+                <div class="stat-card stat-completed">
+                    <div class="stat-value" id="statCompleted">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="data-table" id="requestsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Team</th>
+                            <th>Release Type</th>
+                            <th>Epics</th>
+                            <th>Apps</th>
+                            <th>Status</th>
+                            <th>Submitted</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requestsBody">
+                        <tr><td colspan="8" class="empty-state">Loading requests...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+
+        <!-- GA-Initial View -->
+        <main class="content" id="view-ga-initial" style="display:none;">
+            <div class="page-header">
+                <h1>GA Initial Process</h1>
+                <p class="subtitle">Clone repositories, update versions (app.json / appsourcecop.json / permissionsets), commit, and create PRs for approved requests.</p>
+                <div class="dashboard-filters">
+                    <div class="filter-group">
+                        <label>Status:</label>
+                        <select id="gaFilterStatus" onchange="loadGARequests()">
+                            <option value="in-progress" selected>In Progress</option>
+                            <option value="approved">Approved</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="loadGARequests()">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13.65 2.35A8 8 0 1 0 16 8h-2a6 6 0 1 1-1.76-4.24L10 6h6V0l-2.35 2.35z"/></svg>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="data-table" id="gaRequestsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Team</th>
+                            <th>Release Type</th>
+                            <th>Epics</th>
+                            <th>Apps</th>
+                            <th>Status</th>
+                            <th>Submitted</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gaRequestsBody">
+                        <tr><td colspan="8" class="empty-state">Loading approved requests...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+
+        <!-- GA Process Detail Modal -->
+        <div class="modal-overlay" id="gaProcessModal" style="display:none;">
+            <div class="modal modal-xl">
+                <div class="modal-header">
+                    <h2>GA Initial — Process Details</h2>
+                    <button class="modal-close" onclick="closeGAProcessModal()">&times;</button>
+                </div>
+                <div class="modal-body" id="gaProcessModalBody">
+                    <div class="ga-loading-state"><span class="spinner"></span> Loading version preview...</div>
+                </div>
+                <div class="modal-footer" id="gaProcessModalFooter">
+                </div>
+            </div>
+        </div>
+
+        <!-- GA Progress Modal -->
+        <div class="modal-overlay" id="gaProgressModal" style="display:none;">
+            <div class="modal modal-lg">
+                <div class="modal-header">
+                    <h2>GA Process Running</h2>
+                </div>
+                <div class="modal-body">
+                    <div id="gaProgressLog" class="ga-progress-log"></div>
+                </div>
+                <div class="modal-footer" id="gaProgressFooter">
+                    <button class="btn btn-secondary btn-sm" id="gaProgressCloseBtn" onclick="closeGAProgressModal()" disabled>Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Modal -->
+        <div class="modal-overlay" id="successModal" style="display:none;">
+            <div class="modal">
+                <div class="modal-icon success">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#0078d4" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </div>
+                <h2>Request Submitted Successfully!</h2>
+                <p>Your GA release request has been submitted. The GA team will review and approve it shortly.</p>
+                <div class="modal-details" id="modalDetails"></div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeModal(); showView('dashboard');">View Dashboard</button>
+                    <button class="btn btn-primary" onclick="closeModal(); resetForm();">Submit Another</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Request Detail Modal -->
+        <div class="modal-overlay" id="detailModal" style="display:none;">
+            <div class="modal modal-lg">
+                <div class="modal-header">
+                    <h2>Request Details</h2>
+                    <button class="modal-close" onclick="closeDetailModal()">&times;</button>
+                </div>
+                <div class="modal-body" id="detailModalBody">
+                </div>
+                <div class="modal-footer" id="detailModalFooter">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "appName": {
+            "type": "string",
+            "defaultValue": "ga-release-portal",
+            "metadata": {
+                "description": "Name of the Static Web App"
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "Location for all resources"
+            }
+        },
+        "sku": {
+            "type": "string",
+            "defaultValue": "Standard",
+            "allowedValues": ["Free", "Standard"],
+            "metadata": {
+                "description": "SKU for the Static Web App (Standard required for Azure AD auth)"
+            }
+        },
+        "adoPatSecretValue": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Azure DevOps PAT token"
+            }
+        },
+        "aadClientId": {
+            "type": "string",
+            "metadata": {
+                "description": "Azure AD Application (client) ID"
+            }
+        },
+        "aadClientSecret": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Azure AD Application client secret"
+            }
+        },
+        "storageAccountName": {
+            "type": "string",
+            "defaultValue": "[concat('gareleasestr', uniqueString(resourceGroup().id))]",
+            "metadata": {
+                "description": "Storage account name for Table Storage"
+            }
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2023-01-01",
+            "name": "[parameters('storageAccountName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "minimumTlsVersion": "TLS1_2",
+                "supportsHttpsTrafficOnly": true
+            }
+        },
+        {
+            "type": "Microsoft.Web/staticSites",
+            "apiVersion": "2022-09-01",
+            "name": "[parameters('appName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "[parameters('sku')]"
+            },
+            "properties": {
+                "buildProperties": {
+                    "appLocation": "/frontend",
+                    "apiLocation": "/api",
+                    "outputLocation": ""
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Web/staticSites/config",
+            "apiVersion": "2022-09-01",
+            "name": "[concat(parameters('appName'), '/appsettings')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/staticSites', parameters('appName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+            ],
+            "properties": {
+                "ADO_ORG_URL": "https://schouw.visualstudio.com",
+                "ADO_PROJECT": "Foodware 365 BC",
+                "ADO_PAT": "[parameters('adoPatSecretValue')]",
+                "STORAGE_CONNECTION_STRING": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-01-01').keys[0].value, ';EndpointSuffix=core.windows.net')]",
+                "GA_REVIEWERS": "krishna.s@aptean.com,kapilkumar@aptean.com,subhavarman.rs@aptean.com",
+                "AAD_CLIENT_ID": "[parameters('aadClientId')]",
+                "AAD_CLIENT_SECRET": "[parameters('aadClientSecret')]"
+            }
+        }
+    ],
+    "outputs": {
+        "staticWebAppUrl": {
+            "type": "string",
+            "value": "[concat('https://', reference(resourceId('Microsoft.Web/staticSites', parameters('appName'))).defaultHostname)]"
+        },
+        "staticWebAppName": {
+            "type": "string",
+            "value": "[parameters('appName')]"
+        }
+    }
+}
