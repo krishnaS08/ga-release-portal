@@ -3,6 +3,7 @@
   "configurations": {
     "ga-release-portal": {
       "appLocation": "frontend",
+      "apiLocation": "api",
       "outputLocation": "."
     }
   }

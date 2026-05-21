@@ -2825,12 +2825,17 @@ async function openGAProcessModal(requestId) {
         gaTaskCreationResults = [];
         ensureTaskAssignees(gaPreviewData);
 
-        // If all non-error apps already have tasks (either epic-scoped or cross-team consolidated),
-        // skip dialog 1 entirely and open the PR dialog directly.
+        // If all non-error apps already have tasks (either epic-scoped, cross-team consolidated,
+        // or created earlier this session), skip dialog 1 and open the PR dialog directly.
         const allApps = (gaPreviewData.epics || []).flatMap(e =>
             (e.apps || []).filter(a => !a.error).map(a => ({ ...a, epicId: e.epicId }))
         );
-        const appTaskDone = a => (a.task && a.task.id) || (a.globalTask && a.globalTask.taskId);
+        const appTaskDone = a => {
+            const key = `${a.repoId}|${a.sourceBranch}`;
+            return (a.task && a.task.id) ||
+                   (a.globalTask && a.globalTask.taskId) ||
+                   (gaCreatedTasks[key] && gaCreatedTasks[key].taskId);
+        };
         if (allApps.length > 0 && allApps.every(appTaskDone)) {
             gaTaskCreationResults = allApps.map(a => {
                 const isConsolidated = !(a.task && a.task.id) && !!(a.globalTask && a.globalTask.taskId);
@@ -3101,6 +3106,11 @@ function renderGAPreview(data, editMode) {
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M12.146.854a.5.5 0 0 1 .708 0l2.292 2.292a.5.5 0 0 1 0 .708l-9.5 9.5a.5.5 0 0 1-.168.11l-4 1.5a.5.5 0 0 1-.65-.65l1.5-4a.5.5 0 0 1 .11-.168l9.5-9.5zM11.207 2.5L13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 3 10.707V11h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l7.5-7.5z"/></svg>
                     Edit
                 </button>
+                <button class="btn btn-secondary btn-sm" style="margin-left:auto;"
+                    title="Tasks already exist — skip task creation and go to PR creation"
+                    onclick="skipToGAPRModal('${sanitize(data.requestId)}')">
+                    Tasks done → Create PRs
+                </button>
                 <button id="gaCreateTasksBtn" class="btn-initiate${valid ? '' : ' btn-initiate-disabled'}"
                     onclick="createGATasks('${sanitize(data.requestId)}')"
                     ${valid ? '' : 'disabled title="Fill in all task fields before creating tasks"'}>
@@ -3286,6 +3296,33 @@ async function createGATasks(requestId) {
         showToast(`Task creation failed: ${err.message}`, 'error');
         if (createBtn) { createBtn.disabled = false; createBtn.textContent = 'Create Tasks →'; }
     }
+}
+
+function skipToGAPRModal(requestId) {
+    // User confirmed tasks already exist — populate gaCreatedTasks from whatever
+    // preview data we have (task/globalTask fields) so the PR modal can show the summary.
+    if (gaPreviewData) {
+        const allApps = (gaPreviewData.epics || []).flatMap(e =>
+            (e.apps || []).filter(a => !a.error).map(a => ({ ...a, epicId: e.epicId }))
+        );
+        allApps.forEach(a => {
+            const key = `${a.repoId}|${a.sourceBranch}`;
+            if (gaCreatedTasks[key]) return; // already recorded this session
+            const isConsolidated = !(a.task && a.task.id) && !!(a.globalTask && a.globalTask.taskId);
+            const taskId  = a.task?.id || a.globalTask?.taskId || null;
+            const taskUrl = a.task?.id
+                ? `${CONFIG.adoOrg}/${encodeURIComponent(CONFIG.adoProject)}/_workitems/edit/${a.task.id}`
+                : a.globalTask?.taskId
+                    ? (a.globalTask.taskUrl || `${CONFIG.adoOrg}/${encodeURIComponent(CONFIG.adoProject)}/_workitems/edit/${a.globalTask.taskId}`)
+                    : '';
+            gaCreatedTasks[key] = { repoId: a.repoId, sourceBranch: a.sourceBranch, taskId, taskUrl, consolidated: isConsolidated, preExisting: true };
+            if (taskId) {
+                gaTaskCreationResults.push({ repoId: a.repoId, sourceBranch: a.sourceBranch, epicId: a.epicId, success: true, taskId, taskUrl, consolidated: isConsolidated, preExisting: true });
+            }
+        });
+    }
+    document.getElementById('gaProcessModal').style.display = 'none';
+    openGAPRModal(requestId);
 }
 
 function closeGAProcessModal() {
