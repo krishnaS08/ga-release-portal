@@ -2,14 +2,21 @@ using namespace System.Net
 
 param($Request, $TriggerMetadata)
 
-Import-Module "$PSScriptRoot/../Shared/AdoHelpers.psm1" -Force
 
 try {
     $body = $Request.Body
 
-    $requestId    = $body.requestId
-    $targetBranch = $body.targetBranch ?? 'main'
-    $appOverrides = $body.appOverrides   # array of { repoId, repoName, sourceBranch, targetBranch, newVersion, epicId }
+    $requestId             = $body.requestId
+    $targetBranch          = $body.targetBranch ?? 'main'
+    $appOverrides          = $body.appOverrides   # array of { repoId, repoName, sourceBranch, targetBranch, newVersion, epicId }
+    $initiatorEmail        = $body.initiatorEmail  # email of release team member who clicked Initiate GA
+    $initiatorName         = [string]($body.initiatorName ?? '')  # display name of the same person
+    $skipTranslationCheck  = [bool]$body.skipTranslationCheck
+    $releaseWiId           = [string]($body.releaseWiId ?? '')
+
+    if ($skipTranslationCheck) {
+        Write-Host "[AUDIT] Translation validation was SKIPPED for request $requestId by $initiatorEmail"
+    }
 
     if (-not $requestId) {
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
@@ -31,6 +38,7 @@ try {
 
     $teamName    = $request.teamName
     $releaseType = $request.releaseType
+    $targetMonth = $request.targetMonth
     $epics       = $request.epics
 
     if (-not $epics -or $epics.Count -eq 0) {
@@ -59,16 +67,27 @@ try {
             $repoName     = $app.repoName
             $sourceBranch = $app.sourceBranch
 
-            # Look up per-app overrides from frontend (custom target branch, version)
-            $appTargetBranch = $targetBranch
-            $overrideVersion = $null
+            # Look up per-app overrides from frontend (custom target branch, version, appSourceCop, taskPreview, existingTaskId)
+            $appTargetBranch  = $targetBranch
+            $overrideVersion  = $null
+            $overrideAppSourceCop = $null
+            $taskPreview      = $null
+            $existingTaskId   = ''
             if ($appOverrides) {
                 $override = $appOverrides | Where-Object {
                     $_.repoId -eq $repoId -and $_.sourceBranch -eq $sourceBranch
                 } | Select-Object -First 1
                 if ($override) {
-                    if ($override.targetBranch) { $appTargetBranch = $override.targetBranch }
-                    if ($override.newVersion)   { $overrideVersion = $override.newVersion }
+                    if ($override.targetBranch)        { $appTargetBranch    = $override.targetBranch }
+                    if ($override.newVersion)          { $overrideVersion    = $override.newVersion }
+                    if ($override.appSourceCopVersion) { $overrideAppSourceCop = $override.appSourceCopVersion }
+                    if ($override.existingTaskId)      { $existingTaskId     = [string]$override.existingTaskId }
+                    if ($override.taskPreview) {
+                        $taskPreview = @{}
+                        $override.taskPreview.PSObject.Properties | ForEach-Object {
+                            $taskPreview[$_.Name] = $_.Value
+                        }
+                    }
                 }
             }
 
@@ -82,7 +101,14 @@ try {
                 -ReleaseType $releaseType `
                 -EpicId $epicId `
                 -TeamName $teamName `
-                -OverrideVersion $overrideVersion
+                -OverrideVersion $overrideVersion `
+                -OverrideAppSourceCopVersion $overrideAppSourceCop `
+                -TaskPreview $taskPreview `
+                -InitiatorEmail $initiatorEmail `
+                -InitiatorName  $initiatorName `
+                -TargetMonth $targetMonth `
+                -ExistingTaskId $existingTaskId `
+                -ReleaseWiId $releaseWiId
 
             $allResults += @{
                 repoName     = $repoName

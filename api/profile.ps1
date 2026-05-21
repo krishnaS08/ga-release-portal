@@ -20,3 +20,7 @@ if ($env:MSI_SECRET) {
 # Enable-AzureRmAlias
 
 # You can also define functions or aliases that can be referenced in any of your PowerShell functions.
+
+# Pre-load shared helpers once per worker lifecycle instead of on every request.
+# This avoids the ~3-5s per-request penalty of importing a 100KB module with -Force.
+Import-Module "$PSScriptRoot/Shared/AdoHelpers.psm1"

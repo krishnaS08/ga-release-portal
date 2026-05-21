@@ -171,6 +171,6 @@ Once deployed, embed the portal in AppCentral using an iframe:
 
 | Role | Email |
 |---|---|
-| GA Lead (PR Creator) | krishna.s@aptean.com |
-| GA Reviewer | kapilkumar@aptean.com |
+| GA Lead (PR Creator) | kapilkumar@aptean.com |
+| GA Reviewer | krishna.s@aptean.com |
 | GA Reviewer | subhavarman.rs@aptean.com |

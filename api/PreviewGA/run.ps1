@@ -2,7 +2,6 @@ using namespace System.Net
 
 param($Request, $TriggerMetadata)
 
-Import-Module "$PSScriptRoot/../Shared/AdoHelpers.psm1" -Force
 
 try {
     $body = $Request.Body
@@ -28,6 +27,12 @@ try {
     $teamName    = $request.teamName
     $releaseType = $request.releaseType
     $epics       = $request.epics
+
+    # Fetch task parent WI (GA-Initial tasks are added as children of this WI)
+    $taskParentWi   = $null
+    try { $taskParentWi = Get-TaskParentWiConfig } catch { }
+    $releaseWiId    = if ($taskParentWi) { [string]$taskParentWi.id    } else { '' }
+    $releaseWiTitle = if ($taskParentWi) { [string]$taskParentWi.title } else { '' }
 
     $epicPreviews = @()
 
@@ -68,8 +73,8 @@ try {
             $repoName     = $app.repoName
             $sourceBranch = $app.sourceBranch
 
-            # Read app.json
-            $appInfo = Get-AppInfoFromRepo -RepoId $repoId -Branch $sourceBranch
+            # Read app.json from MAIN branch (current version = main branch version)
+            $appInfo = Get-AppInfoFromRepo -RepoId $repoId -Branch 'main'
             $currentVersion = $null
             $newVersion     = $null
             $appShortName   = ''
@@ -77,27 +82,46 @@ try {
             $appJsonError   = $null
 
             if ($appInfo.error) {
-                $appJsonError = $appInfo.error
+                # Fallback: try source branch if main doesn't have app.json
+                $appInfo = Get-AppInfoFromRepo -RepoId $repoId -Branch $sourceBranch
+                if ($appInfo.error) {
+                    $appJsonError = $appInfo.error
+                }
             }
-            else {
+
+            if (-not $appJsonError) {
                 $currentVersion = $appInfo.version
                 $appShortName   = $appInfo.appShortName
                 $appName        = $appInfo.appName
-                $newVersion     = New-VersionBump -CurrentVersion $currentVersion -ReleaseType $releaseType
+                # Hotfix doesn't bump the app.json version — only appsourcecop.json moves.
+                if ($releaseType -eq 'hotfix') {
+                    $newVersion = $currentVersion
+                } else {
+                    $newVersion = New-VersionBump -CurrentVersion $currentVersion -ReleaseType $releaseType -TargetMonth ($request.targetMonth ?? '')
+                }
             }
 
-            # Read appsourcecop.json
+            # Get AppSourceCop version from latest stable tag on main branch
             $appSourceCopVersion = $null
-            if (-not $appJsonError -and $appInfo.appJsonPath) {
-                $appJsonDir = Split-Path $appInfo.appJsonPath -Parent
-                $ascPath = if ($appJsonDir) { "$appJsonDir/appsourcecop.json" } else { 'appsourcecop.json' }
-                $ascContent = Get-FileFromRepo -RepoId $repoId -FilePath $ascPath -Branch $sourceBranch
-                if ($ascContent) {
-                    try {
-                        $ascJson = $ascContent | ConvertFrom-Json
-                        $appSourceCopVersion = $ascJson.version
+            if (-not $appJsonError) {
+                $stableVersion = Get-StableTagVersion -RepoId $repoId -Branch 'main'
+                if ($stableVersion) {
+                    $appSourceCopVersion = $stableVersion
+                }
+                else {
+                    # Fallback: read from appsourcecop.json in main
+                    if ($appInfo.appJsonPath) {
+                        $appJsonDir = Split-Path $appInfo.appJsonPath -Parent
+                        $ascPath = if ($appJsonDir) { "$appJsonDir/appsourcecop.json" } else { 'appsourcecop.json' }
+                        $ascContent = Get-FileFromRepo -RepoId $repoId -FilePath $ascPath -Branch 'main'
+                        if ($ascContent) {
+                            try {
+                                $ascJson = $ascContent | ConvertFrom-Json
+                                $appSourceCopVersion = $ascJson.version
+                            }
+                            catch { }
+                        }
                     }
-                    catch { }
                 }
             }
 
@@ -111,9 +135,33 @@ try {
             }
 
             # Find matching task
+            # Epic-scoped task check (same epic, same app)
             $matchingTask = $null
             if ($existingTasks -and $appShortName) {
                 $matchingTask = $existingTasks | Where-Object { $_.title -like "*$appShortName*" } | Select-Object -First 1
+            }
+
+            # Cross-team global task check (same app, possibly different epic/team)
+            $globalTask = $null
+            if ($appShortName -and -not $matchingTask) {
+                try { $globalTask = Find-GlobalGATask -AppName $appShortName -TargetMonth ($request.targetMonth ?? '') } catch { }
+            }
+
+            # Build task creation preview
+            $releaseLabel = switch ($releaseType) {
+                'feature'      { 'Major' }
+                'stability'    { 'Minor' }
+                'hotfix'       { 'Hotfix' }
+                'service-pack' { 'Service Pack' }
+                default        { 'Minor' }
+            }
+            $taskTitle = Get-GATaskTitle -AppShortName $appShortName -ReleaseType $releaseType -TargetMonth ($request.targetMonth ?? '')
+            $taskPreview = @{
+                title       = $taskTitle
+                appName     = $repoName
+                teamName    = $teamName
+                version     = $newVersion
+                releaseType = $releaseLabel
             }
 
             $appPreviews += @{
@@ -128,6 +176,8 @@ try {
                 branches            = $branches
                 error               = $appJsonError
                 task                = $matchingTask
+                globalTask          = $globalTask   # cross-team consolidation candidate
+                taskPreview         = $taskPreview
             }
         }
 
@@ -139,18 +189,27 @@ try {
         }
     }
 
-    $releaseLabel = if ($releaseType -eq 'feature') { 'Major' } else { 'Minor' }
+    $releaseLabel = switch ($releaseType) {
+        'feature'      { 'Major' }
+        'stability'    { 'Minor' }
+        'hotfix'       { 'Hotfix' }
+        'service-pack' { 'Service Pack' }
+        default        { 'Minor' }
+    }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
         Headers    = @{ 'Content-Type' = 'application/json' }
         Body       = (@{
-            requestId    = $requestId
-            teamName     = $teamName
-            releaseType  = $releaseType
-            releaseLabel = $releaseLabel
-            status       = $request.status
-            epics        = $epicPreviews
+            requestId      = $requestId
+            teamName       = $teamName
+            releaseType    = $releaseType
+            releaseLabel   = $releaseLabel
+            targetMonth    = $request.targetMonth ?? ''
+            releaseWiId    = $releaseWiId
+            releaseWiTitle = $releaseWiTitle
+            status         = $request.status
+            epics          = $epicPreviews
         } | ConvertTo-Json -Depth 10)
     })
 }

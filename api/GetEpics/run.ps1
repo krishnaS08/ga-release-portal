@@ -4,10 +4,15 @@ param($Request, $TriggerMetadata)
 
 Import-Module "$PSScriptRoot/../Shared/AdoHelpers.psm1" -Force
 
-$teamName = $Request.Query.teamName
+$teamName  = $Request.Query.teamName
+$releaseId = $Request.Query.releaseId
 
 try {
-    $epics = Get-AdoGAEpics -TeamName $teamName
+    if ($releaseId) {
+        $epics = Get-EpicsFromRelease -ReleaseId $releaseId
+    } else {
+        $epics = Get-AdoGAEpics -TeamName $teamName
+    }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK

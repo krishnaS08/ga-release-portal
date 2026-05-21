@@ -10,42 +10,127 @@
     <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div id="app">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-left">
-                <div class="logo">
-                    <img src="Aptean.png" alt="Aptean" width="32" height="32" style="object-fit:contain;">
-                    <span class="logo-text">GA Release Portal</span>
-                </div>
+    <!-- Login Page — shown before SSO authentication -->
+    <div id="loginPage" class="login-page">
+        <!-- Animated AI background -->
+        <div class="login-bg" aria-hidden="true">
+            <canvas id="loginParticleCanvas" class="login-particle-canvas"></canvas>
+            <!-- Extra aurora orbs beyond the CSS ::before / ::after -->
+            <div class="login-aurora-orb login-aurora-orb-3"></div>
+            <div class="login-aurora-orb login-aurora-orb-4"></div>
+        </div>
+        <!-- Perspective grid overlay on login -->
+        <div class="login-grid-overlay" aria-hidden="true"></div>
+
+        <div class="login-card">
+            <div class="login-logo-halo">
+                <span class="login-logo-ring"></span>
+                <span class="login-logo-ring login-logo-ring-2"></span>
+                <img src="Aptean.png" alt="Aptean">
             </div>
-            <nav class="header-nav">
-                <button class="nav-btn active" data-view="submit" onclick="showView('submit')">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M14 1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM8.5 11.5h-1v-4h1v4zm0-5h-1v-1h1v1z"/></svg>
-                    New Request
+
+            <h1 class="login-title">GA Release Portal</h1>
+            <p class="login-subtitle">Sign in with your Aptean account to continue</p>
+
+            <button class="btn btn-primary login-btn" id="loginBtn" onclick="signIn()">
+                <svg width="20" height="20" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+                Sign in with Microsoft
+            </button>
+            <p class="login-hint" id="loginHint"></p>
+
+            <p class="login-footer">&copy; 2026 Aptean &middot; Internal use only</p>
+        </div>
+    </div>
+
+    <div id="app" style="display:none;">
+        <!-- App shell: sidebar + main content -->
+        <div class="app-shell">
+
+        <!-- Left Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <!-- Logo / branding -->
+            <div class="sidebar-logo">
+                <img src="Aptean.png" alt="Aptean" width="28" height="28" style="object-fit:contain;flex-shrink:0;">
+                <span class="sidebar-logo-text">GA Release Portal</span>
+            </div>
+
+            <!-- Nav items -->
+            <nav class="sidebar-nav">
+                <button class="sidebar-nav-btn active" data-view="submit" onclick="showView('submit')" title="New Request">
+                    <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M14 1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM8.5 11.5h-1v-4h1v4zm0-5h-1v-1h1v1z"/></svg>
+                    <span class="sidebar-nav-label">New Request</span>
                 </button>
-                <button class="nav-btn" data-view="dashboard" onclick="showView('dashboard')">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1h6v6H1V1zm8 0h6v6H9V1zM1 9h6v6H1V9zm8 0h6v6H9V9z"/></svg>
-                    Dashboard
+                <button class="sidebar-nav-btn" data-view="dashboard" onclick="showView('dashboard')" title="Dashboard">
+                    <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1h6v6H1V1zm8 0h6v6H9V1zM1 9h6v6H1V9zm8 0h6v6H9V9z"/></svg>
+                    <span class="sidebar-nav-label">Dashboard</span>
                 </button>
-                <button class="nav-btn" data-view="ga-initial" onclick="showView('ga-initial')">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a.5.5 0 0 1 .5.5V5h3a.5.5 0 0 1 .354.854l-4 4a.5.5 0 0 1-.708 0l-4-4A.5.5 0 0 1 3.5 5h3V1.5A.5.5 0 0 1 8 1zM1 12.5A1.5 1.5 0 0 1 2.5 11h11a1.5 1.5 0 0 1 1.5 1.5v1A1.5 1.5 0 0 1 13.5 15h-11A1.5 1.5 0 0 1 1 13.5v-1z"/></svg>
-                    GA-Initial
+                <button class="sidebar-nav-btn" data-view="ga-initial" onclick="showView('ga-initial')" title="GA-Initial">
+                    <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a.5.5 0 0 1 .5.5V5h3a.5.5 0 0 1 .354.854l-4 4a.5.5 0 0 1-.708 0l-4-4A.5.5 0 0 1 3.5 5h3V1.5A.5.5 0 0 1 8 1zM1 12.5A1.5 1.5 0 0 1 2.5 11h11a1.5 1.5 0 0 1 1.5 1.5v1A1.5 1.5 0 0 1 13.5 15h-11A1.5 1.5 0 0 1 1 13.5v-1z"/></svg>
+                    <span class="sidebar-nav-label">GA-Initial</span>
                 </button>
             </nav>
-            <div class="header-right">
-                <div class="user-info" id="userInfo">
-                    <span class="user-avatar" id="userAvatar">?</span>
-                    <span class="user-name" id="userName">Sign In</span>
+
+            <!-- Spacer pushes user profile to bottom -->
+            <div class="sidebar-spacer"></div>
+
+            <!-- Theme toggle -->
+            <button class="sidebar-theme-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle dark / light theme">
+                <svg class="theme-icon-moon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278z"/>
+                </svg>
+                <svg class="theme-icon-sun" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707z"/>
+                </svg>
+                <span class="sidebar-nav-label theme-label">Dark Mode</span>
+            </button>
+
+            <!-- Collapse toggle -->
+            <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" onclick="toggleSidebar()" title="Collapse sidebar">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/></svg>
+            </button>
+
+            <!-- User profile at bottom -->
+            <div class="sidebar-user">
+                <div class="user-menu" id="userMenu">
+                    <div class="user-info sidebar-user-info" id="userInfo" onclick="toggleUserMenu(event)" title="Account menu">
+                        <span class="user-avatar" id="userAvatar">?</span>
+                        <span class="sidebar-user-details">
+                            <span class="user-name" id="userName">...</span>
+                        </span>
+                        <svg class="user-menu-caret" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M3.204 5l4.796 4.796L12.796 5H3.204z"/></svg>
+                    </div>
+                    <div class="user-menu-dropdown sidebar-user-dropdown" id="userMenuDropdown">
+                        <div class="user-menu-header">
+                            <div class="user-menu-name" id="userMenuName"></div>
+                            <div class="user-menu-email" id="userMenuEmail"></div>
+                        </div>
+                        <button class="user-menu-item user-menu-logout" onclick="confirmSignOut()">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M10 12.5a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-7A1.5 1.5 0 0 0 1 3.5v9A1.5 1.5 0 0 0 2.5 14h7a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/><path d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/></svg>
+                            Sign out
+                        </button>
+                    </div>
                 </div>
             </div>
-        </header>
+        </aside>
+
+        <!-- Main content area -->
+        <div class="app-main">
+
+        <!-- ── Next-gen AI animated background ── -->
+        <div class="app-bg" aria-hidden="true">
+            <canvas id="appParticleCanvas" class="app-particle-canvas"></canvas>
+            <div class="app-aurora-orb app-aurora-orb-1"></div>
+            <div class="app-aurora-orb app-aurora-orb-2"></div>
+            <div class="app-aurora-orb app-aurora-orb-3"></div>
+            <div class="app-aurora-orb app-aurora-orb-4"></div>
+            <div class="app-aurora-orb app-aurora-orb-5"></div>
+        </div>
+        <div class="app-grid-overlay" aria-hidden="true"></div>
 
         <!-- Submit Request View -->
         <main class="content" id="view-submit">
             <div class="page-header">
                 <h1>Submit GA Release Request</h1>
-                <p class="subtitle">Replace the manual email handover — submit your release details here and GA team will initiate the process.</p>
             </div>
 
             <form id="gaRequestForm" class="form-container" onsubmit="return handleSubmit(event)">
@@ -58,31 +143,81 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="teamName">Team Name <span class="required">*</span></label>
-                            <input type="text" id="teamName" name="teamName" placeholder="Enter your team name"
-                                required oninput="onTeamNameChange()" onblur="onTeamNameChange()">
+                            <div class="team-search-wrapper">
+                                <input type="text" id="teamName" name="teamName" placeholder="Search team name..."
+                                    required autocomplete="off" oninput="onTeamSearchInput()" onfocus="onTeamSearchFocus()" onblur="onTeamSearchBlur()">
+                                <div class="team-dropdown" id="teamDropdown"></div>
+                            </div>
                         </div>
 
                         <div class="form-group">
                             <label for="releaseType">Release Type <span class="required">*</span></label>
-                            <select id="releaseType" name="releaseType" required>
+                            <select id="releaseType" name="releaseType" required onchange="onReleaseTypeChange()">
                                 <option value="">Select release type...</option>
                                 <option value="feature">Feature / Major</option>
                                 <option value="stability">Stability / Minor</option>
+                                <option value="hotfix">Hotfix</option>
+                                <option value="service-pack">Service Pack</option>
                             </select>
                         </div>
 
+                        <!-- Cutoff Warning Banner -->
+                        <div class="cutoff-banner full-width" id="cutoffBanner" style="display:none;"></div>
+
                         <div class="form-group">
-                            <label for="submitterEmail">Your Email <span class="required">*</span></label>
-                            <input type="email" id="submitterEmail" name="submitterEmail" placeholder="yourname@aptean.com" required>
+                            <label for="submitterEmail">Your Email</label>
+                            <input type="email" id="submitterEmail" name="submitterEmail" readonly class="sso-email-field">
                         </div>
 
                         <div class="form-group">
                             <label for="targetMonth">Target Release Month <span class="required">*</span></label>
-                            <input type="month" id="targetMonth" name="targetMonth" required>
+                            <select id="targetMonth" name="targetMonth" required>
+                                <option value="">Select target month...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label for="ccEmails">CC Team Members <span class="optional-label">(Optional)</span></label>
+                            <div class="cc-input-container">
+                                <div class="cc-tags" id="ccTags"></div>
+                                <input type="text" id="ccEmailInput" placeholder="Type name or email to search (@aptean.com)..." autocomplete="off" oninput="onCcInputChange()" onkeydown="onCcInputKeydown(event)">
+                                <div class="cc-suggestions" id="ccSuggestions"></div>
+                            </div>
+                            <input type="hidden" id="ccEmails" name="ccEmails">
                         </div>
                     </div>
 
-                    <!-- Epic selection area — revealed after team name is entered -->
+                    <!-- Hotfix-only fields -->
+                    <div id="hotfixFields" class="hotfix-fields" style="display:none;">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="hotfixApprovedBy">Hotfix Approved By <span class="required">*</span></label>
+                                <div class="approver-search-container">
+                                    <input type="text" id="hotfixApprovedByInput" placeholder="Search approver name..." autocomplete="off" oninput="onApproverSearch()" onkeydown="onApproverKeydown(event)">
+                                    <div class="approver-suggestions" id="approverSuggestions"></div>
+                                    <input type="hidden" id="hotfixApprovedBy" name="hotfixApprovedBy">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="approvalMail">Approval Mail <span class="required">*</span></label>
+                                <div class="file-upload-container">
+                                    <input type="file" id="approvalMail" name="approvalMail" accept=".eml,.msg,.pdf,.png,.jpg,.jpeg" onchange="onApprovalFileChange()">
+                                    <div class="file-upload-hint">Attach the approval email (.eml, .msg, .pdf, or screenshot)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active Release WI — always visible; content set by JS -->
+                    <div class="form-group full-width" id="releaseWiRow">
+                        <label>Active Release</label>
+                        <div id="releaseBanner" class="release-wi-field">
+                            <span class="spinner release-wi-loading" id="releaseBannerLoading"></span>
+                            <span id="releaseBannerText" style="display:none;"></span>
+                        </div>
+                    </div>
+
+                    <!-- Epic selection area — revealed after team name is entered (or immediately when active release is set) -->
                     <div id="epicSection" style="display:none;">
                         <div class="epics-area-header">
                             <h3 class="epics-area-title">Epics for GA Validation</h3>
@@ -91,7 +226,7 @@
                                 Add Epic
                             </button>
                         </div>
-                        <p class="section-hint">Showing epics with Factory Status = "70 GA Validation". Each epic can contain multiple apps.</p>
+                        <p class="section-hint" id="epicSectionHint">Showing epics with Factory Status = "70 GA Validation". Each epic can contain multiple apps.</p>
                         <div id="epicBlocksContainer">
                             <!-- Epic blocks rendered by JS -->
                         </div>
@@ -107,6 +242,20 @@
                     <div class="form-group full-width">
                         <label for="notes">Notes / Special Instructions</label>
                         <textarea id="notes" name="notes" rows="3" placeholder="Any special instructions, dependencies, or things GA team should know..."></textarea>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Attachments</label>
+                        <div class="upload-zone" id="uploadZone">
+                            <div class="upload-zone-body">
+                                <svg class="upload-zone-icon" width="32" height="32" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
+                                <p class="upload-zone-text">Drop files here or <span class="upload-browse-link">browse</span></p>
+                                <p class="upload-zone-hint">Images (PNG, JPG, GIF), Excel (XLS, XLSX), PDF, Word, CSV, TXT &mdash; up to 5 files, 10 MB each</p>
+                            </div>
+                            <input type="file" id="attachmentInput" multiple
+                                accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.xlsx,.xls,.pdf,.doc,.docx,.txt,.csv"
+                                style="display:none">
+                            <div id="attachmentList" class="attachment-list"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -129,7 +278,7 @@
                 <div class="dashboard-filters">
                     <div class="filter-group">
                         <label>Status:</label>
-                        <select id="filterStatus" onchange="loadRequests()">
+                        <select id="filterStatus" onchange="updateStatCardActive(this.value); loadRequests()">
                             <option value="">All</option>
                             <option value="pending">Pending Review</option>
                             <option value="approved">Approved</option>
@@ -144,6 +293,10 @@
                             <option value="">All Teams</option>
                         </select>
                     </div>
+                    <div class="filter-group">
+                        <label>Epics:</label>
+                        <input type="text" id="filterEpics" class="form-input-sm" placeholder="e.g. 12345, 12346" oninput="onEpicFilterInput()">
+                    </div>
                     <button class="btn btn-secondary btn-sm" onclick="loadRequests()">
                         <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13.65 2.35A8 8 0 1 0 16 8h-2a6 6 0 1 1-1.76-4.24L10 6h6V0l-2.35 2.35z"/></svg>
                         Refresh
@@ -152,19 +305,19 @@
             </div>
 
             <div class="dashboard-stats" id="dashboardStats">
-                <div class="stat-card">
+                <div class="stat-card stat-clickable" onclick="setStatusFilter('pending')" title="Filter by Pending Review">
                     <div class="stat-value" id="statPending">0</div>
                     <div class="stat-label">Pending</div>
                 </div>
-                <div class="stat-card stat-approved">
+                <div class="stat-card stat-approved stat-clickable" onclick="setStatusFilter('approved')" title="Filter by Approved">
                     <div class="stat-value" id="statApproved">0</div>
                     <div class="stat-label">Approved</div>
                 </div>
-                <div class="stat-card stat-progress">
+                <div class="stat-card stat-progress stat-clickable" onclick="setStatusFilter('in-progress')" title="Filter by In Progress">
                     <div class="stat-value" id="statInProgress">0</div>
                     <div class="stat-label">In Progress</div>
                 </div>
-                <div class="stat-card stat-completed">
+                <div class="stat-card stat-completed stat-clickable" onclick="setStatusFilter('completed')" title="Filter by Completed">
                     <div class="stat-value" id="statCompleted">0</div>
                     <div class="stat-label">Completed</div>
                 </div>
@@ -195,14 +348,65 @@
         <main class="content" id="view-ga-initial" style="display:none;">
             <div class="page-header">
                 <h1>GA Initial Process</h1>
-                <p class="subtitle">Clone repositories, update versions (app.json / appsourcecop.json / permissionsets), commit, and create PRs for approved requests.</p>
+                <p class="subtitle">Auto-GA, branch management, task closure, and live status tools for GA releases.</p>
+            </div>
+
+            <!-- Subtab Navigation -->
+            <div class="ga-subtab-bar">
+                <button class="ga-subtab active" data-subtab="ga-version" onclick="showGASubtab('ga-version')">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zm0 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM6.5 5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1 0-1zm0 2.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1 0-1zm0 2.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1z"/></svg>
+                    Auto-GA
+                </button>
+                <button class="ga-subtab" data-subtab="ga-rebase" onclick="showGASubtab('ga-rebase')">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M5 3.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zM5 12.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zm7-7.5a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zM4.25 7.5a.75.75 0 0 0-.75.75v.75c0 1.243 1.007 2.25 2.25 2.25h2.5a.75.75 0 0 0 .75-.75v-.75a.75.75 0 0 0-.75-.75h-.5V7.5h-3.5z"/></svg>
+                    Rebase Tool
+                </button>
+                <button class="ga-subtab" data-subtab="ga-branch" onclick="showGASubtab('ga-branch')">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M11.75 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5zm-2.25.75a2.25 2.25 0 1 1 3 2.122V6c0 .414-.336.75-.75.75h-2.25a.25.25 0 0 0-.25.25v3.378a2.25 2.25 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.5 0V7h2.25V5.372A2.25 2.25 0 0 1 9.5 3.25zM4.25 12a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5zM4.25 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5z"/></svg>
+                    Branch Mgmt
+                </button>
+                <button class="ga-subtab" data-subtab="ga-closure" onclick="showGASubtab('ga-closure')">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"/></svg>
+                    Task/Epic Closure
+                </button>
+                <button class="ga-subtab" data-subtab="ga-livestatus" onclick="showGASubtab('ga-livestatus')">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2zM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm9-3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM8 7a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 7z"/></svg>
+                    Live Status
+                </button>
+                <button class="ga-subtab" id="releaseConfigTabBtn" data-subtab="ga-release-config" onclick="showGASubtab('ga-release-config')" style="display:none;">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/></svg>
+                    Release Config
+                </button>
+            </div>
+
+            <!-- Subtab: Auto-GA (existing GA-Initial content) -->
+            <div class="ga-subtab-content active" id="subtab-ga-version">
                 <div class="dashboard-filters">
+                    <div class="filter-group">
+                        <label>Team:</label>
+                        <select id="gaFilterTeam" onchange="loadGARequests()">
+                            <option value="">All Teams</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Release Type:</label>
+                        <select id="gaFilterReleaseType" onchange="loadGARequests()">
+                            <option value="">All</option>
+                            <option value="feature">Feature / Major</option>
+                            <option value="stability">Stability / Minor</option>
+                            <option value="hotfix">Hotfix</option>
+                            <option value="service-pack">Service Pack</option>
+                        </select>
+                    </div>
                     <div class="filter-group">
                         <label>Status:</label>
                         <select id="gaFilterStatus" onchange="loadGARequests()">
+                            <option value="">All</option>
                             <option value="in-progress" selected>In Progress</option>
                             <option value="approved">Approved</option>
                             <option value="completed">Completed</option>
+                            <option value="pending">Pending</option>
+                            <option value="rejected">Rejected</option>
                         </select>
                     </div>
                     <button class="btn btn-secondary btn-sm" onclick="loadGARequests()">
@@ -210,30 +414,298 @@
                         Refresh
                     </button>
                 </div>
+                <div class="table-container">
+                    <table class="data-table" id="gaRequestsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Team</th>
+                                <th>Release Type</th>
+                                <th>Epics</th>
+                                <th>Apps</th>
+                                <th>Status</th>
+                                <th>Submitted</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gaRequestsBody">
+                            <tr><td colspan="8" class="empty-state">Loading approved requests...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            <div class="table-container">
-                <table class="data-table" id="gaRequestsTable">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Team</th>
-                            <th>Release Type</th>
-                            <th>Epics</th>
-                            <th>Apps</th>
-                            <th>Status</th>
-                            <th>Submitted</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="gaRequestsBody">
-                        <tr><td colspan="8" class="empty-state">Loading approved requests...</td></tr>
-                    </tbody>
-                </table>
+            <!-- Subtab: Rebase Tool -->
+            <div class="ga-subtab-content" id="subtab-ga-rebase">
+                <div class="tool-header">
+                    <div class="tool-controls">
+                        <div class="filter-group">
+                            <label>Activity within:</label>
+                            <select id="rebaseDaysFilter">
+                                <option value="7">7 days</option>
+                                <option value="14">14 days</option>
+                                <option value="30" selected>30 days</option>
+                                <option value="60">60 days</option>
+                                <option value="90">90 days</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Search:</label>
+                            <input type="text" id="rebaseSearch" class="form-input-sm" placeholder="Filter scanned repos..." oninput="filterRebaseRepos()">
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="scanRebaseRepos()">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.242.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/></svg>
+                            Scan Repositories
+                        </button>
+                    </div>
+                    <span class="tool-status" id="rebaseStatus"></span>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="rebaseTable">
+                        <thead>
+                            <tr>
+                                <th style="width:40px"><input type="checkbox" id="rebaseSelectAll" onchange="toggleRebaseSelectAll(this)"></th>
+                                <th>#</th>
+                                <th>Repository</th>
+                                <th>Develop Commit</th>
+                                <th>Main Commit</th>
+                                <th>Behind By</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rebaseBody">
+                            <tr><td colspan="7" class="empty-state">Click "Scan Repositories" to check sync status.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="tool-actions" id="rebaseActions" style="display:none;">
+                    <button class="btn btn-secondary btn-sm" onclick="toggleRebaseSelection(true)">Select All Out-of-Sync</button>
+                    <button class="btn btn-secondary btn-sm" onclick="toggleRebaseSelection(false)">Deselect All</button>
+                    <button class="btn btn-primary btn-sm" onclick="startRebase()">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zM4.5 7.5a.5.5 0 0 0 0 1h5.793L8.146 10.354a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L10.293 7.5H4.5z"/></svg>
+                        Start Rebase
+                    </button>
+                </div>
+            </div>
+
+            <!-- Subtab: Branch Management -->
+            <div class="ga-subtab-content" id="subtab-ga-branch">
+                <!-- Repos List View -->
+                <div id="branchReposView">
+                    <div class="tool-header">
+                        <div class="tool-controls">
+                            <div class="filter-group">
+                                <label>Search:</label>
+                                <input type="text" id="branchRepoSearch" class="form-input-sm" placeholder="Filter repositories..." oninput="filterBranchRepos()">
+                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="loadBranchRepos()">
+                                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13.65 2.35A8 8 0 1 0 16 8h-2a6 6 0 1 1-1.76-4.24L10 6h6V0l-2.35 2.35z"/></svg>
+                                Load Repos
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table" id="branchRepoTable">
+                            <thead>
+                                <tr>
+                                    <th>Repository</th>
+                                    <th>Default Branch</th>
+                                    <th style="width:200px">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="branchRepoBody">
+                                <tr><td colspan="3" class="empty-state">Click "Load Repos" to list repositories.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Per-Repo Branches Detail View -->
+                <div id="branchRepoDetailView" style="display:none;">
+                    <div class="tool-header">
+                        <button class="btn btn-secondary btn-sm" onclick="closeBranchRepoDetail()">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/></svg>
+                            Back to Repos
+                        </button>
+                        <h3 id="branchDetailTitle" style="margin:0;flex:1"></h3>
+                    </div>
+
+                    <div class="branch-detail-create">
+                        <h4>Create Branch</h4>
+                        <div class="branch-detail-form">
+                            <input type="text" id="branchDetailNewName" class="form-input" placeholder="New branch name (e.g. batch/GA2026)">
+                            <select id="branchDetailSource" class="form-select"></select>
+                            <button class="btn btn-success btn-sm" onclick="createBranchInRepo()">
+                                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2z"/></svg>
+                                Create
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="branch-detail-list">
+                        <h4>Existing Branches <span id="branchDetailCount" class="branch-count"></span></h4>
+                        <input type="text" id="branchDetailFilter" class="form-input-sm" placeholder="Filter branches..." oninput="filterRepoBranches()">
+                        <div class="table-container">
+                            <table class="data-table" id="branchDetailTable">
+                                <thead>
+                                    <tr>
+                                        <th>Branch Name</th>
+                                        <th style="width:120px">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="branchDetailBody">
+                                    <tr><td colspan="2" class="empty-state"><span class="spinner"></span> Loading branches...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subtab: Task/Epic Closure -->
+            <div class="ga-subtab-content" id="subtab-ga-closure">
+                <div class="tool-header">
+                    <div class="tool-controls">
+                        <div class="filter-group">
+                            <label>Epic ID(s):</label>
+                            <input type="text" id="closureEpicIds" class="form-input-sm" placeholder="optional — leave empty to load all GA Validation epics">
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="loadClosureEpics()">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2.5A.5.5 0 0 1 2.5 2h11a.5.5 0 0 1 .5.5v11a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11zM3 3v10h10V3H3z"/><path d="M5.5 6.5A.5.5 0 0 1 6 6h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1-.5-.5z"/></svg>
+                            Load GA Validation Tasks
+                        </button>
+                    </div>
+                    <span class="tool-status" id="closureStatus"></span>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="closureTable">
+                        <thead>
+                            <tr>
+                                <th style="width:40px"><input type="checkbox" id="closureSelectAll" onchange="toggleClosureSelectAll(this)"></th>
+                                <th>Epic</th>
+                                <th>Task ID</th>
+                                <th>Title</th>
+                                <th>State</th>
+                                <th>Assigned To</th>
+                                <th>App</th>
+                                <th>Team</th>
+                                <th>Version</th>
+                                <th>Release Type</th>
+                                <th>Tags</th>
+                                <th style="width:60px">Edit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="closureBody">
+                            <tr><td colspan="12" class="empty-state">Click "Load GA Validation Tasks" to view child tasks under BC GA area path.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="tool-actions" id="closureActions" style="display:none;">
+                    <button class="btn btn-primary btn-sm" onclick="closeSelectedTasks()">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"/></svg>
+                        Close Selected Tasks
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="closeParentEpics()">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3z"/></svg>
+                        Close Parent Epic(s)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Subtab: Live Status -->
+            <div class="ga-subtab-content" id="subtab-ga-livestatus">
+                <div class="tool-header">
+                    <div class="tool-controls">
+                        <div class="filter-group">
+                            <label>Repository:</label>
+                            <select id="liveStatusRepo" class="form-select-sm">
+                                <option value="">-- Select Repository --</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="checkLiveStatus()">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2zM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8z"/><path d="M9-3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM8 7a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 7z"/></svg>
+                            Check Live Status
+                        </button>
+                    </div>
+                </div>
+                <div class="live-status-results" id="liveStatusResults">
+                    <div class="empty-state">Select a repository and click "Check Live Status" to compare AppSource vs. Stable tag versions.</div>
+                </div>
+            </div>
+
+            <!-- Subtab: Release Config (GA Admin only) -->
+            <div class="ga-subtab-content" id="subtab-ga-release-config">
+
+                <!-- Section 1: Active Release WI (epic filtering) -->
+                <div class="release-config-panel">
+                    <div class="release-config-header">
+                        <h3>Active Release Work Item</h3>
+                        <p class="section-hint">Set the current month's Release work item. All submitters will see only the epics linked to this release with Factory Status "70 GA Validation".</p>
+                    </div>
+                    <div class="release-config-current" id="releaseConfigCurrent">
+                        <div class="release-config-status">
+                            <span class="release-config-label">Current Active Release:</span>
+                            <span class="release-config-value" id="releaseConfigDisplay">
+                                <em style="opacity:0.55;">None set — submitters see all epics</em>
+                            </span>
+                        </div>
+                        <button class="btn btn-danger btn-sm" id="clearReleaseBtn" onclick="clearActiveRelease()" style="display:none;">
+                            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                            Clear
+                        </button>
+                    </div>
+                    <div class="release-config-form">
+                        <label class="form-label" for="releaseWiInput">Set Release Work Item ID</label>
+                        <div class="release-config-input-row">
+                            <input type="text" id="releaseWiInput" class="form-input" placeholder="e.g. 373828" inputmode="numeric" pattern="[0-9]+"
+                                oninput="onReleaseWiInput()" onchange="onReleaseWiInput()" onkeydown="if(event.key==='Enter')fetchAndSaveRelease()">
+                            <button class="btn btn-secondary btn-sm" id="releaseWiPreviewBtn" onclick="previewReleaseWi()" disabled>Preview</button>
+                            <button class="btn btn-primary btn-sm" id="releaseWiSaveBtn" onclick="fetchAndSaveRelease()" disabled>
+                                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg>
+                                Save &amp; Activate
+                            </button>
+                        </div>
+                        <div class="release-config-preview" id="releaseWiPreview" style="display:none;"></div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Task Parent WI (GA-Initial task creation) -->
+                <div class="release-config-panel" style="margin-top:20px;">
+                    <div class="release-config-header">
+                        <h3>GA-Initial Task Parent Work Item</h3>
+                        <p class="section-hint">Tasks created during GA-Initial will be added as children of this work item (e.g. "Release 373828: May Minor Release - 27 May 2026"). Update this every release month.</p>
+                    </div>
+                    <div class="release-config-current" id="taskParentWiConfigCurrent">
+                        <div class="release-config-status">
+                            <span class="release-config-label">Current Task Parent WI:</span>
+                            <span class="release-config-value" id="taskParentWiDisplay">
+                                <em style="opacity:0.55;">None set — tasks will be linked to the Epic instead</em>
+                            </span>
+                        </div>
+                        <button class="btn btn-danger btn-sm" id="clearTaskParentWiBtn" onclick="clearTaskParentWi()" style="display:none;">
+                            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                            Clear
+                        </button>
+                    </div>
+                    <div class="release-config-form">
+                        <label class="form-label" for="taskParentWiInput">Set Task Parent Work Item ID</label>
+                        <div class="release-config-input-row">
+                            <input type="text" id="taskParentWiInput" class="form-input" placeholder="e.g. 373828" inputmode="numeric" pattern="[0-9]+"
+                                oninput="onTaskParentWiInput()" onchange="onTaskParentWiInput()" onkeydown="if(event.key==='Enter')saveTaskParentWi()">
+                            <button class="btn btn-secondary btn-sm" id="taskParentWiPreviewBtn" onclick="previewTaskParentWi()" disabled>Preview</button>
+                            <button class="btn btn-primary btn-sm" id="taskParentWiSaveBtn" onclick="saveTaskParentWi()" disabled>
+                                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg>
+                                Save
+                            </button>
+                        </div>
+                        <div class="release-config-preview" id="taskParentWiPreview" style="display:none;"></div>
+                    </div>
+                </div>
+
             </div>
         </main>
 
-        <!-- GA Process Detail Modal -->
+        <!-- GA Process Detail Modal — Step 1: Task Creation -->
         <div class="modal-overlay" id="gaProcessModal" style="display:none;">
             <div class="modal modal-xl">
                 <div class="modal-header">
@@ -244,6 +716,177 @@
                     <div class="ga-loading-state"><span class="spinner"></span> Loading version preview...</div>
                 </div>
                 <div class="modal-footer" id="gaProcessModalFooter">
+                </div>
+            </div>
+        </div>
+
+        <!-- GA PR Modal — Step 2: PR Creation -->
+        <div class="modal-overlay" id="gaPRModal" style="display:none;">
+            <div class="modal modal-xl">
+                <div class="modal-header">
+                    <h2>GA Initial — Create PRs</h2>
+                    <button class="modal-close" onclick="closeGAPRModal()">&times;</button>
+                </div>
+                <div class="modal-body" id="gaPRModalBody"></div>
+                <div class="modal-footer" id="gaPRModalFooter"></div>
+            </div>
+        </div>
+
+        <!-- Edit Request Modal — for the original submitter to edit their pending request -->
+        <div class="modal-overlay" id="editRequestModal" style="display:none;">
+            <div class="modal modal-lg">
+                <div class="modal-header">
+                    <h2>Edit Request <span id="editRequestIdSuffix" style="font-weight:400;color:#94a3b8;"></span></h2>
+                    <button class="modal-close" onclick="closeSubmitterEditModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="edit-task-grid">
+                        <label>Request ID <span class="readonly-badge">read-only</span></label>
+                        <input type="text" id="editRequestId" disabled>
+
+                        <label>Status <span class="readonly-badge">read-only</span></label>
+                        <input type="text" id="editRequestStatus" disabled>
+
+                        <label>Team Name</label>
+                        <input type="text" id="editRequestTeam" class="form-input">
+
+                        <label>CC Emails</label>
+                        <input type="text" id="editRequestCc" class="form-input" placeholder="comma-separated, e.g. a@aptean.com, b@aptean.com">
+
+                        <label>Notes</label>
+                        <textarea id="editRequestNotes" class="form-input" rows="3" style="resize:vertical;"></textarea>
+
+                        <label>Epics &amp; Apps</label>
+                        <div id="editRequestEpicsSummary" class="edit-request-epics-summary"></div>
+                    </div>
+                    <div class="validation-info" style="margin-top:14px; display:block;">
+                        <strong>Saving this edit will email the GA Team</strong> (Kapil Kumar, Subha Varman, Krishna S) so they can re-review.
+                        Need to change epics, apps, source branch, or release type? Please contact the GA team directly.
+                    </div>
+                    <div class="validation-error" id="editRequestValidation" style="display:none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary btn-sm" onclick="closeSubmitterEditModal()">Cancel</button>
+                    <button class="btn btn-primary btn-sm" id="editRequestSaveBtn" onclick="saveSubmitterEdit()">Save &amp; Notify GA</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Task Modal (Task/Epic Closure subtab — inline edit on a single task) -->
+        <div class="modal-overlay" id="editTaskModal" style="display:none;">
+            <div class="modal modal-lg">
+                <div class="modal-header">
+                    <h2>Edit Task <span id="editTaskTitleSuffix" style="font-weight:400;color:#94a3b8;"></span></h2>
+                    <button class="modal-close" onclick="closeEditTaskModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="edit-task-grid">
+                        <label>Epic <span class="readonly-badge">read-only</span></label>
+                        <input type="text" id="editTaskEpic" disabled>
+
+                        <label>Task ID <span class="readonly-badge">read-only</span></label>
+                        <input type="text" id="editTaskIdField" disabled>
+
+                        <label>Title</label>
+                        <input type="text" id="editTaskTitle" class="form-input">
+
+                        <label>State <span class="required">*</span></label>
+                        <select id="editTaskState" class="form-select" onchange="onEditTaskStateChange()">
+                            <option value="New">New</option>
+                            <option value="Active">Active</option>
+                            <option value="Resolved">Resolved</option>
+                            <option value="Closed">Closed</option>
+                        </select>
+
+                        <label>Assigned To</label>
+                        <input type="text" id="editTaskAssignedTo" class="form-input" placeholder="email@aptean.com">
+
+                        <label>App <span class="required">*</span></label>
+                        <input type="text" id="editTaskApp" class="form-input">
+
+                        <label>Team <span class="required">*</span></label>
+                        <input type="text" id="editTaskTeam" class="form-input">
+
+                        <label>Version</label>
+                        <input type="text" id="editTaskVersion" class="form-input" placeholder="e.g. 2602.1.0.0">
+
+                        <label>Release Type <span class="required">*</span></label>
+                        <select id="editTaskReleaseType" class="form-select">
+                            <option value="">--</option>
+                            <option>Major</option>
+                            <option>Minor</option>
+                            <option>Hotfix</option>
+                            <option>Feature</option>
+                            <option>Stability</option>
+                        </select>
+
+                        <label>Tags <span class="required">*</span></label>
+                        <div>
+                            <input type="text" id="editTaskTags" class="form-input" placeholder="e.g. MAY, 2026">
+                            <small class="suggested-tags-hint" id="editTaskSuggestedTagsHint"></small>
+                        </div>
+                    </div>
+                    <div class="validation-error" id="editTaskValidation" style="display:none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary btn-sm" onclick="closeEditTaskModal()">Cancel</button>
+                    <button class="btn btn-primary btn-sm" id="editTaskSaveBtn" onclick="saveEditTask()">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- GA Validation Modal — starts as a progress bar while translations are checked,
+             then morphs (in place) into the result view: a Yes/No confirmation if any
+             new captions/labels/tooltips lack a matching .xlf entry. -->
+        <div class="modal-overlay" id="gaValidationModal" style="display:none;">
+            <div class="modal modal-lg">
+                <div class="modal-header">
+                    <h2 id="gaValidationTitle">Validating translations…</h2>
+                </div>
+
+                <!-- Phase 1 — progress -->
+                <div class="modal-body" id="gaValidationProgressBody">
+                    <p class="validation-progress-status" id="validationProgressStatus">Initializing…</p>
+                    <div class="validation-progress-bar-track">
+                        <div class="validation-progress-bar-fill" id="validationProgressFill"></div>
+                    </div>
+                    <p class="validation-progress-percent" id="validationProgressPercent">0%</p>
+                </div>
+
+                <!-- Phase 2 — issues found (hidden until validation completes with misses) -->
+                <div class="modal-body" id="gaValidationIssuesBody" style="display:none;">
+                    <div class="validation-result-header">
+                        <span class="validation-result-icon" aria-hidden="true">⚠</span>
+                        <div>
+                            <strong>Translation check completed with issues</strong>
+                            <div class="validation-result-sub">
+                                The source branches for this request contain new captions, labels, or tooltips that have <strong>no matching entry</strong> in the translation (<code>.xlf</code>) files.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="missing-translations-summary" id="missingTranslationsCount"></div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>File : Line</th>
+                                    <th style="width:90px">Type</th>
+                                    <th>Text</th>
+                                </tr>
+                            </thead>
+                            <tbody id="missingTranslationsBody"></tbody>
+                        </table>
+                    </div>
+                    <p class="validation-confirm-question">Do you want to proceed without translations?</p>
+                </div>
+
+                <div class="modal-footer" id="gaValidationIssuesFooter" style="display:none;">
+                    <button class="btn btn-danger btn-sm" onclick="notifySubmitterMissingTranslations()">
+                        No — Notify submitter &amp; halt
+                    </button>
+                    <button class="btn btn-warning btn-sm" onclick="proceedWithoutTranslations()">
+                        Yes — Proceed without translations
+                    </button>
                 </div>
             </div>
         </div>
@@ -292,8 +935,11 @@
                 </div>
             </div>
         </div>
+        </div><!-- /.app-main -->
+        </div><!-- /.app-shell -->
     </div>
 
+    <script src="msal-browser.min.js"></script>
     <script src="auth.js"></script>
     <script src="app.js"></script>
 </body>

@@ -2,7 +2,6 @@ using namespace System.Net
 
 param($Request, $TriggerMetadata)
 
-Import-Module "$PSScriptRoot/../Shared/AdoHelpers.psm1" -Force
 
 $status = $Request.Query.status
 $team = $Request.Query.team
