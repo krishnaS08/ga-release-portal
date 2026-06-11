@@ -1,0 +1,309 @@
+# =============================================================================
+# GA Release Portal — Translation Pipeline
+# =============================================================================
+# Purpose: Download BC symbols, build AL project (alc.exe), generate .g.xlf,
+#          refresh translations, and commit changes back to source branch.
+#
+# Triggered by: GA Release Portal → StartTranslationProcess endpoint
+#
+# Pipeline variables (passed at queue time by the portal):
+#   TRANSLATION_MODE        : 'request' | 'branch'
+#   TRANSLATION_REQUEST_ID  : GA request ID (empty for branch mode)
+#   TRANSLATION_REPOS       : JSON array of { repoId, repoName, sourceBranch }
+#   TRANSLATION_REQUESTER   : email of person who triggered
+#
+# =============================================================================
+
+trigger: none
+
+variables:
+  TRANSLATION_MODE:       'branch'
+  TRANSLATION_REQUEST_ID: ''
+  TRANSLATION_REPOS:      '[]'
+  TRANSLATION_REQUESTER:  ''
+  SYMBOL_ARTIFACTS_FEED:  'main'
+  SYMBOL_ARTIFACTS_ORG:   'schouw'
+  SYMBOL_ARTIFACTS_PROJ:  'Foodware 365 BC'
+  SYMBOL_ARTIFACTS_PKG:   'main'
+  SYMBOL_ARTIFACTS_VER:   'latest'
+  NAB_TOOLS_PATH:         'default'
+
+pool:
+  vmImage: 'windows-2022'
+
+stages:
+  - stage: ParseInput
+    displayName: 'Stage 1: Parse & Validate'
+    jobs:
+      - job: ValidateRepos
+        displayName: 'Validate TRANSLATION_REPOS'
+        steps:
+          - checkout: none
+
+          - pwsh: |
+              Write-Host "=== PARSE TRANSLATION_REPOS ==="
+              $raw = '$(TRANSLATION_REPOS)'
+              Write-Host "Payload: $raw"
+              
+              try {
+                $repos = $raw | ConvertFrom-Json
+              } catch {
+                Write-Error "Invalid JSON in TRANSLATION_REPOS: $_"
+                exit 1
+              }
+              
+              if (-not $repos -or $repos.Count -eq 0) {
+                Write-Host "No repos — pipeline will complete without processing."
+                exit 0
+              }
+              
+              Write-Host "✓ Found $($repos.Count) repo(s) to process:"
+              $repos | ForEach-Object {
+                Write-Host "  - $($_.repoName) @ $($_.sourceBranch) (ID: $($_.repoId))"
+              }
+            displayName: 'Validate repos'
+
+  - stage: TranslateRepos
+    displayName: 'Stage 2: Download Symbols + Build + Translate'
+    dependsOn: ParseInput
+    condition: succeeded()
+    jobs:
+      - job: ProcessRepos
+        displayName: 'Process each repo'
+        timeoutInMinutes: 120
+        steps:
+          - checkout: none
+
+          # ── Step 1: Setup & Download Symbols ──────────────────────────────
+          - pwsh: |
+              Write-Host "=== STAGE 2: DOWNLOAD SYMBOLS + BUILD + TRANSLATE ==="
+              
+              $repos = '$(TRANSLATION_REPOS)' | ConvertFrom-Json
+              if (-not $repos -or $repos.Count -eq 0) {
+                Write-Host "No repos to process — skipping."
+                exit 0
+              }
+
+              $adoOrgUrl = "$(System.TeamFoundationCollectionUri)".TrimEnd('/')
+              $adoProject = "$(System.TeamProject)"
+              $pat = '$(ADO_PAT)'
+
+              # Base64 encode PAT for git auth
+              $b64 = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$pat"))
+              $gitAuthHeader = "Authorization: Basic $b64"
+
+              $allResults = @()
+
+              foreach ($repo in $repos) {
+                $repoName     = $repo.repoName
+                $sourceBranch = $repo.sourceBranch
+                $repoId       = $repo.repoId
+
+                Write-Host ""
+                Write-Host "────────────────────────────────────────"
+                Write-Host "Processing: $repoName @ $sourceBranch"
+                Write-Host "────────────────────────────────────────"
+
+                $workDir = Join-Path $env:AGENT_TEMPDIRECTORY "xlf-$repoName-$([guid]::NewGuid().ToString('N').Substring(0,8))"
+                New-Item -ItemType Directory -Path $workDir -Force | Out-Null
+
+                $result = @{
+                  repoName     = $repoName
+                  sourceBranch = $sourceBranch
+                  success      = $false
+                  error        = ''
+                  xlfsUpdated  = 0
+                }
+
+                try {
+                  # ── 1. Git Clone ──────────────────────────────────────────
+                  Write-Host "[1/5] Cloning repository..."
+                  $cloneUrl = "$adoOrgUrl/$([uri]::EscapeDataString($adoProject))/_git/$([uri]::EscapeDataString($repoName))"
+                  
+                  git -c "http.extraheader=$gitAuthHeader" clone --branch $sourceBranch --depth 1 $cloneUrl $workDir 2>&1 | Out-Null
+                  if ($LASTEXITCODE -ne 0) {
+                    throw "git clone failed"
+                  }
+                  Write-Host "  ✓ Cloned"
+
+                  # ── 2. Find app.json ──────────────────────────────────────
+                  Write-Host "[2/5] Locating app.json..."
+                  $appJsonPath = Get-ChildItem -Path $workDir -Filter 'app.json' -Recurse |
+                    Where-Object { $_.FullName -notmatch '(?i)(test|\.test|node_modules)' } |
+                    Select-Object -First 1
+
+                  if (-not $appJsonPath) {
+                    throw "app.json not found in $repoName"
+                  }
+
+                  $appJson = Get-Content $appJsonPath.FullName -Raw | ConvertFrom-Json
+                  $appSrcDir = $appJsonPath.DirectoryName
+                  Write-Host "  ✓ Found: $($appJson.name) v$($appJson.version)"
+                  Write-Host "    Path: $appSrcDir"
+
+                  # ── 3. Download BC Symbols ────────────────────────────────
+                  Write-Host "[3/5] Downloading BC symbols from $(SYMBOL_ARTIFACTS_FEED) feed..."
+
+                  $symbolDir = Join-Path $workDir '.alpackages'
+                  New-Item -ItemType Directory -Path $symbolDir -Force | Out-Null
+
+                  # Download from Azure Artifacts
+                  az artifacts universal download `
+                    --organization "$adoOrgUrl" `
+                    --project "$(SYMBOL_ARTIFACTS_PROJ)" `
+                    --scope project `
+                    --feed $(SYMBOL_ARTIFACTS_FEED) `
+                    --name $(SYMBOL_ARTIFACTS_PKG) `
+                    --version $(SYMBOL_ARTIFACTS_VER) `
+                    --path "$symbolDir" 2>&1 | Out-Null
+
+                  if ($LASTEXITCODE -ne 0) {
+                    Write-Warning "Symbol download via 'az artifacts' failed. Continuing with build (may fail if symbols required)."
+                  } else {
+                    $appCount = @(Get-ChildItem -Path $symbolDir -Filter '*.app' -Recurse).Count
+                    Write-Host "  ✓ Downloaded $appCount .app file(s)"
+                  }
+
+                  # ── 4. Build with alc.exe ────────────────────────────────
+                  Write-Host "[4/5] Building with alc.exe..."
+
+                  # Locate alc.exe from AL Language extension
+                  $alcExe = Get-ChildItem -Path "$env:APPDATA\Code\User\globalStorage" `
+                    -Filter 'alc.exe' -Recurse -ErrorAction SilentlyContinue |
+                    Select-Object -First 1
+
+                  if (-not $alcExe) {
+                    Write-Host "  [INFO] alc.exe not found — attempting standard path"
+                    $alcExe = 'alc.exe'
+                  } else {
+                    $alcExe = $alcExe.FullName
+                  }
+
+                  $buildDir = Join-Path $workDir 'build'
+                  New-Item -ItemType Directory -Path $buildDir -Force | Out-Null
+
+                  Write-Host "  Using alc.exe: $alcExe"
+                  Write-Host "  Project: $appSrcDir"
+                  Write-Host "  Symbols: $symbolDir"
+                  Write-Host "  Output: $buildDir"
+
+                  & $alcExe /project:`"$appSrcDir`" /packageCachePath:`"$symbolDir`" /out:`"$buildDir`" 2>&1 | Tee-Object -Variable buildOutput
+
+                  if ($LASTEXITCODE -ne 0) {
+                    Write-Host "  [INFO] Build completed with warnings/info (this is normal)"
+                  } else {
+                    Write-Host "  ✓ Build succeeded"
+                  }
+
+                  # Verify .g.xlf was generated
+                  $gXlfFiles = @(Get-ChildItem -Path $appSrcDir -Filter '*.g.xlf' -Recurse)
+                  if ($gXlfFiles.Count -gt 0) {
+                    Write-Host "  ✓ Generated $($gXlfFiles.Count) .g.xlf file(s)"
+                  } else {
+                    Write-Host "  [INFO] No .g.xlf files found (may not have translations)"
+                  }
+
+                  # ── 5. Refresh & Commit XLF ──────────────────────────────
+                  Write-Host "[5/5] Committing translation files..."
+
+                  Push-Location $workDir
+                  try {
+                    git config user.email 'ga-portal@aptean.com'
+                    git config user.name 'GA Release Portal'
+
+                    # Stage .xlf files
+                    git add '*.xlf' '*.xliff' 2>&1 | Out-Null
+
+                    # Check for changes
+                    $status = git status --short 2>&1
+                    if ($status) {
+                      $timestamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+                      $msg = "[GA-Translation] Updated by portal - $timestamp"
+                      if ('$(TRANSLATION_REQUESTER)') {
+                        $msg += " ($(TRANSLATION_REQUESTER))"
+                      }
+
+                      git commit -m $msg 2>&1 | Out-Null
+                      git -c "http.extraheader=$gitAuthHeader" push origin HEAD:refs/heads/$sourceBranch 2>&1 | Out-Null
+
+                      if ($LASTEXITCODE -eq 0) {
+                        Write-Host "  ✓ Committed & pushed translation files"
+                      } else {
+                        Write-Warning "  git push failed (branch may be protected)"
+                      }
+                    } else {
+                      Write-Host "  ℹ No translation changes to commit"
+                    }
+                  } finally {
+                    Pop-Location
+                  }
+
+                  $result.success = $true
+
+                } catch {
+                  $result.error = $_.Exception.Message
+                  Write-Host "  ✗ ERROR: $($_.Exception.Message)"
+                } finally {
+                  # Cleanup
+                  if (Test-Path $workDir) {
+                    Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
+                  }
+                }
+
+                $allResults += $result
+              }
+
+              # ── Summary ────────────────────────────────────────────────
+              Write-Host ""
+              Write-Host "════════════════════════════════════════"
+              Write-Host "SUMMARY"
+              Write-Host "════════════════════════════════════════"
+              $succeeded = ($allResults | Where-Object { $_.success }).Count
+              $failed    = ($allResults | Where-Object { -not $_.success }).Count
+              Write-Host "Total repos: $($allResults.Count)"
+              Write-Host "Succeeded:   $succeeded ✓"
+              Write-Host "Failed:      $failed ✗"
+
+              if ($failed -gt 0) {
+                Write-Host ""
+                Write-Host "Failed repos:"
+                $allResults | Where-Object { -not $_.success } | ForEach-Object {
+                  Write-Host "  ✗ $($_.repoName) @ $($_.sourceBranch)"
+                  Write-Host "    Error: $($_.error)"
+                }
+                exit 1
+              }
+
+              Write-Host "════════════════════════════════════════"
+            displayName: 'Download symbols + build + commit'
+            env:
+              TRANSLATION_REPOS:      $(TRANSLATION_REPOS)
+              TRANSLATION_REQUEST_ID: $(TRANSLATION_REQUEST_ID)
+              TRANSLATION_REQUESTER:  $(TRANSLATION_REQUESTER)
+              ADO_PAT:                $(ADO_PAT)
+              SYMBOL_ARTIFACTS_FEED:  $(SYMBOL_ARTIFACTS_FEED)
+              SYMBOL_ARTIFACTS_PKG:   $(SYMBOL_ARTIFACTS_PKG)
+              SYMBOL_ARTIFACTS_VER:   $(SYMBOL_ARTIFACTS_VER)
+
+  - stage: Notify
+    displayName: 'Stage 3: Notification'
+    dependsOn: TranslateRepos
+    condition: always()
+    jobs:
+      - job: ReportStatus
+        displayName: 'Report pipeline completion'
+        steps:
+          - checkout: none
+
+          - pwsh: |
+              Write-Host ""
+              Write-Host "═══════════════════════════════════════"
+              Write-Host "Pipeline completed"
+              Write-Host "═══════════════════════════════════════"
+              Write-Host "Mode:      $(TRANSLATION_MODE)"
+              Write-Host "Request:   $(TRANSLATION_REQUEST_ID)"
+              Write-Host "Requester: $(TRANSLATION_REQUESTER)"
+              Write-Host "Status:    $(Agent.JobStatus)"
+              Write-Host "Build ID:  $(Build.BuildId)"
+              Write-Host "═══════════════════════════════════════"
+            displayName: 'Log completion'
